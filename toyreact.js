@@ -1,3 +1,5 @@
+const RENDER_TO_DOM = Symbol('render to dom');
+
 class ElementWrapper {
   constructor(type) {
     this.root = document.createElement(type);
@@ -8,6 +10,11 @@ class ElementWrapper {
   appendChild(component) {
     this.root.appendChild(component.root);
   }
+
+  [RENDER_TO_DOM](range) {
+    range.deleteContents();
+    range.insertNode(this.root);
+  }
 }
 
 class TextWrapper {
@@ -16,6 +23,11 @@ class TextWrapper {
   }
   appendChild(component) {
     this.root.appendChild(component.root);
+  }
+
+  [RENDER_TO_DOM](range) {
+    range.deleteContents();
+    range.insertNode(this.root);
   }
 }
 
@@ -31,11 +43,8 @@ export class Component {
   appendChild(component) {
     this.children.push(component);
   }
-  get root() {
-    if (!this._root) {
-      this._root = this.render().root;
-    }
-    return this._root;
+  [RENDER_TO_DOM](range) {
+    this.render()[RENDER_TO_DOM](range);
   }
 }
 
@@ -67,6 +76,10 @@ export function createElement(type, attributes, ...children) {
 }
 
 export function render(component, parentElement) {
-  parentElement.appendChild(component.root);
-  // document.body;
+  const range = document.createRange();
+  range.setStart(parentElement, 0);
+  range.setEnd(parentElement, parentElement.childNodes.length);
+  range.deleteContents();
+
+  component[RENDER_TO_DOM](range);
 }
