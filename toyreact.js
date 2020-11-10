@@ -7,15 +7,20 @@ class ElementWrapper {
   setAttribute(name, value) {
     if (name.match(/^on([\s\S]+)$/)) {
       this.root.addEventListener(
-        RegExp.$1.replace(/^[\s\S]/, (c) => c.toLocaleLowerCase()),
+        RegExp.$1.replace(/^[\s\S]/, (c) => c.toLowerCase()),
         value
       );
+    } else if (name === 'className') {
+      this.root.setAttribute('class', value);
     } else {
       this.root.setAttribute(name, value);
     }
   }
   appendChild(component) {
-    this.root.appendChild(component.root);
+    const range = document.createRange();
+    range.setStart(this.root, this.root.childNodes.length);
+    range.setEnd(this.root, this.root.childNodes.length);
+    component[RENDER_TO_DOM](range);
   }
   [RENDER_TO_DOM](range) {
     range.deleteContents();
@@ -26,9 +31,6 @@ class ElementWrapper {
 class TextWrapper {
   constructor(content) {
     this.root = document.createTextNode(content);
-  }
-  appendChild(component) {
-    this.root.appendChild(component.root);
   }
   [RENDER_TO_DOM](range) {
     range.deleteContents();
@@ -41,6 +43,7 @@ export class Component {
     this.props = Object.create(null);
     this.children = [];
     this._root = null;
+    this._range = null;
   }
   setAttribute(name, value) {
     this.props[name] = value;
@@ -89,6 +92,9 @@ export function createElement(type, attributes, ...children) {
   }
   let insertChildren = (children) => {
     for (const child of children) {
+      if (child === null) {
+        continue;
+      }
       if (typeof child === 'string') {
         child = new TextWrapper(child);
       }
