@@ -5,12 +5,18 @@ class ElementWrapper {
     this.root = document.createElement(type);
   }
   setAttribute(name, value) {
-    this.root.setAttribute(name, value);
+    if (name.match(/^on([\s\S]+)$/)) {
+      this.root.addEventListener(
+        RegExp.$1.replace(/^[\s\S]/, (c) => c.toLocaleLowerCase()),
+        value
+      );
+    } else {
+      this.root.setAttribute(name, value);
+    }
   }
   appendChild(component) {
     this.root.appendChild(component.root);
   }
-
   [RENDER_TO_DOM](range) {
     range.deleteContents();
     range.insertNode(this.root);
@@ -24,7 +30,6 @@ class TextWrapper {
   appendChild(component) {
     this.root.appendChild(component.root);
   }
-
   [RENDER_TO_DOM](range) {
     range.deleteContents();
     range.insertNode(this.root);
@@ -44,7 +49,30 @@ export class Component {
     this.children.push(component);
   }
   [RENDER_TO_DOM](range) {
+    this._range = range;
     this.render()[RENDER_TO_DOM](range);
+  }
+  rerender() {
+    this._range.deleteContents();
+    this[RENDER_TO_DOM](this._range);
+  }
+  setState(newState) {
+    if (this.state === null || typeof this.state !== 'object') {
+      this.state = newState;
+      this.rerender();
+      return;
+    }
+    const merge = (oldState, newState) => {
+      for (const key in newState) {
+        if (oldState[key] === null || typeof oldState[key] !== 'object') {
+          oldState[key] = newState[key];
+        } else {
+          merge(oldState[key], newState[key]);
+        }
+      }
+    };
+    merge(this.state, newState);
+    this.rerender();
   }
 }
 
